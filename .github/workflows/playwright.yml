@@ -1,0 +1,60 @@
+
+name: Playwright Python Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    env:
+      BASE_URL: https://www.saucedemo.com
+      TEST_USERNAME: standard_user
+      TEST_PASSWORD: secret_sauce
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Install Playwright Chromium
+        run: python -m playwright install --with-deps chromium
+
+      - name: Create reports directory
+        run: mkdir -p reports
+
+      - name: Run automated tests
+        run: |
+          python -m pytest -v \
+            --html=reports/report.html \
+            --self-contained-html
+
+      - name: Upload test artifacts
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: playwright-test-results
+          path: |
+            test-results/
+            reports/report.html
+          if-no-files-found: warn
+          retention-days: 14
